@@ -1,55 +1,52 @@
+// ✅ 修正後の index.js（例）
 const express = require("express");
 const axios = require("axios");
+const bodyParser = require("body-parser");
+require("dotenv").config();
+
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
+app.use(bodyParser.json());
 
-app.post("/astro", async (req, res) => {
-  const { latitude, longitude, date, time } = req.body;
+app.post("/planets", async (req, res) => {
+    const { latitude, longitude, elevation, from_date, to_date, time } = req.body;
 
-  try {
-    // Step 1: Authenticate and get token
-    const tokenResponse = await axios.post(
-      "https://api.astronomyapi.com/api/v2/auth/token",
-      {},
-      {
-        headers: {
-          "Authorization": "Basic " + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64"),
-          "Content-Length": "0"
-        }
-      }
-    );
+    try {
+        // トークン取得
+        const tokenRes = await axios.post("https://api.astronomyapi.com/api/v2/authenticate", {
+            client_id: process.env.ASTRO_CLIENT_ID,
+            client_secret: process.env.ASTRO_SECRET
+        });
 
-    const token = tokenResponse.data.data;
+        const token = tokenRes.data.data;
 
-    // Step 2: Get planet positions
-    const dataResponse = await axios.post(
-      "https://api.astronomyapi.com/api/v2/bodies/positions",
-      {
-        latitude,
-        longitude,
-        elevation: 0,
-        from_date: date,
-        to_date: date,
-        time
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
+        // 惑星位置取得
+        const result = await axios.post(
+            "https://api.astronomyapi.com/api/v2/bodies/positions",
+            {
+                latitude,
+                longitude,
+                elevation,
+                from_date,
+                to_date,
+                time
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        );
 
-    res.json(dataResponse.data);
-  } catch (error) {
-    console.error("API Error:", error.response?.data || error.message);
-    res.status(500).json({ error: "Failed to fetch astronomical data" });
-  }
+        res.json(result.data);
+    } catch (err) {
+        console.error("サーバーエラー:", err.message);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+    console.log(`🌍 Server running on port ${PORT}`);
 });
