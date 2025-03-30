@@ -12,10 +12,13 @@ app.post("/planets", async (req, res) => {
     const { latitude, longitude, elevation, from_date, to_date, time } = req.body;
 
     try {
+        // 🔐 トークン取得
         const tokenRes = await axios.post("https://api.astronomyapi.com/api/v2/authenticate", {
             client_id: process.env.ASTRO_CLIENT_ID,
             client_secret: process.env.ASTRO_SECRET
         });
+
+        console.log("🔐 トークン取得レスポンス:", tokenRes.data); // ← トークン内容を確認
 
         const token = tokenRes.data.data;
 
@@ -23,6 +26,7 @@ app.post("/planets", async (req, res) => {
             throw new Error("トークン取得に失敗しました。空のトークンが返されました。");
         }
 
+        // 🌌 惑星データ取得
         const result = await axios.post(
             "https://api.astronomyapi.com/api/v2/bodies/positions",
             {
